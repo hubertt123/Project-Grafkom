@@ -187,9 +187,8 @@ export const captions = [
   [46, 54, "Huggy tersenyum dan melambai ramah ..."],
   [54, 66, "... lalu tiba-tiba membesar! Mereka berlari!"],
   [66, 72, "Huggy kembali tenang."],
-  [72, 80, "Ia melambai ke arah kamera."],
-  [80, 96, "Huggy berbalik dan menghilang ke dalam pintu."],
-  [96, 100, "TAMAT"]
+  [80, 96, "Huggy melambai dan berbalik ke dalam pintu."],
+  [96, 100, ""]
 ];
 
 export function buildStory({ env, huggy, charB, charC, cam }) {
@@ -748,11 +747,20 @@ function frame(ms) {
   const mRightBranch = LIBS.translate(BRANCH_X.right, 0, -46.5);
   catbeeEnv.draw(GL, catbeeProg, mRightBranch);
 
-  catBeeChar.update(ms / 1000, dt, playing, null);
-  catAngle += dt * 0.5 * catBeeChar.speed;
+  // Paksa mode melayang/hover (force = 1.0) agar gerakan sayap & animasi terbang mulus
+  catBeeChar.update(ms / 1000, dt, playing, 1.0);
+  catAngle += dt * 0.7 * catBeeChar.speed;
   const Radius = 1.4;
+
   let mCat = LIBS.multiply(mRightBranch, LIBS.translate(Radius * Math.sin(catAngle), 0, Radius * Math.cos(catAngle)));
-  mCat = LIBS.multiply(mCat, LIBS.rotateY(catAngle + Math.PI / 2));
+
+  // Konversi sudut radian ke derajat untuk LIBS.rotateY agar arah Cat-Bee selalu tepat ke depan
+  const angleDeg = (catAngle * 180 / Math.PI) + 90;
+  mCat = LIBS.multiply(mCat, LIBS.rotateY(angleDeg));
+
+  // Perbesar ukuran Cat-Bee sebesar 1.35x
+  mCat = LIBS.multiply(mCat, LIBS.scale(1.35, 1.35, 1.35));
+
   catBeeChar.draw(GL, catbeeProg, mCat);
 
   statusEl.textContent = free ? "KAMERA BEBAS aktif - WASD gerak, drag = lihat, F = kembali" : "";

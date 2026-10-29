@@ -157,7 +157,6 @@ export class CatBee {
   }
 }
 
-// Ukuran environment disesuaikan agar pas di dalam lorong kanan (lebar ~4.4 unit dari pusat)
 const ROOM = { x: 4.0, z: 5.0, h: 8.0 };
 
 const rnd = (i, j, s = 0) => {
@@ -201,18 +200,21 @@ function boxMesh(gl, w, h, d, c) {
 function floorMesh(gl) {
   const q = [], g = 0.03;
   const X = ROOM.x * 2, Z = ROOM.z * 2;
+  const yOffset = 0.01; // Offset kecil untuk mencegah Z-fighting dengan lantai dasar
   for (let i = 0; i < X; i++)
     for (let j = 0; j < Z; j++) {
       const x0 = -ROOM.x + i + g, x1 = -ROOM.x + i + 1 - g;
       const z0 = -ROOM.z + j + g, z1 = -ROOM.z + j + 1 - g;
       const r = rnd(i, j), v = rnd(j, i, 3);
       let c;
-      if (r < 0.09) c = [0.50, 0.11, 0.11];        // merah
-      else if (r < 0.17) c = [0.14, 0.24, 0.52];   // biru
-      else if (r < 0.24) c = [0.58, 0.47, 0.11];   // kuning
-      else if (r < 0.28) c = [0.14, 0.38, 0.20];   // hijau
+      if (r < 0.09) c = [0.50, 0.11, 0.11];
+      else if (r < 0.17) c = [0.14, 0.24, 0.52];
+      else if (r < 0.28) c = [0.58, 0.47, 0.11];
+      else if (r < 0.28) c = [0.14, 0.38, 0.20];
       else { const k = 0.16 + 0.09 * v; c = [k, k + 0.015, k + 0.04]; }
-      q.push({ p: [[x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1]], n: [0, 1, 0], c });
+      
+      // Menggunakan yOffset pengganti nilai 0
+      q.push({ p: [[x0, yOffset, z0], [x1, yOffset, z0], [x1, yOffset, z1], [x0, yOffset, z1]], n: [0, 1, 0], c });
     }
   return quadMesh(gl, q);
 }
@@ -242,14 +244,11 @@ export class CatbeeEnvironment {
     const DARK = [0.06, 0.06, 0.08], DGRAY = [0.14, 0.15, 0.17];
     const GLASS = [0.38, 0.46, 0.50], WHITE = [0.92, 0.92, 0.9], BLACK = [0.03, 0.03, 0.04];
 
-    // 1. Render Motif Lantai Ubin yang Fit
     put(R, floorMesh(gl));
 
-    // 2. Marka Lingkaran Konsentris di Lantai (tempat Cat-Bee berputar)
     [[1.8, [0.62, 0.50, 0.10]], [1.6, [0.50, 0.12, 0.10]], [1.4, [0.14, 0.30, 0.55]], [1.2, [0.15, 0.17, 0.20]]]
       .forEach(([r, c], k) => put(R, ell(r, 0.004 * (k + 1), r, c), [0, 0, -1.5]));
 
-    // 3. Tabung Kaca Samping (Kiri Lorong Kanan)
     const tank = (x, z) => {
       const g = grp(R, [x, 0, z], [0, PI / 2, 0]);
       cyl(g, 0.5, 0.7, YEL);
@@ -261,8 +260,9 @@ export class CatbeeEnvironment {
     };
     tank(-3.2, -1.0);
 
-    // 4. Mesin Merah Bermata di Belakang (Pas di Ujung Lorong Kanan)
-    const rm = grp(R, [0, 0, -4.2], [0, 0, 0]);
+    // Mesin Merah Make-A-Friend di Belakang (SKALA DIBESARKAN MENJADI 2.3x)
+    const rm = grp(R, [0, 0, -4.7], [0, 0, 0]);
+    rm.scl = 2.3;
     put(rm, box(1.8, 0.2, 1.4, DARK), [0, 0, 0]);
     put(rm, box(1.7, 2.2, 1.3, RED), [0, 0.2, 0]);
     put(rm, box(0.9, 1.2, 0.04, BLU), [0.2, 0.2, 0.68]);
