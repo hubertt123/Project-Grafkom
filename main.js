@@ -1,6 +1,6 @@
-import { LIBS, createRenderer, Animated, ease, set, param, pulse, moveTo, turnTo, scaleTo, camTo, flicker } from "./libs.js";
-import { MyObject, makeNode } from "./libs.js";
-import * as B from "./libs.js";
+import { LIBS, createRenderer, Animated, ease, set, param, pulse, moveTo, turnTo, scaleTo, camTo, flicker } from "./libshuggy.js";
+import { MyObject, makeNode } from "./libshuggy.js";
+import * as B from "./libshuggy.js";
 import { Huggy, Dummy } from "./Huggy.js";
 import {
   vsub, vadd, vmul, vdot, vcross, vlen, vnorm, smooth,

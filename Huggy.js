@@ -1,5 +1,5 @@
-import { MyObject, makeNode, Animated, clamp01 } from "./libs.js";
-import * as B from "./libs.js";
+import { MyObject, makeNode, Animated, clamp01 } from "./libshuggy.js";
+import * as B from "./libshuggy.js";
 
 // ==========================================
 // 1. CHARACTER (Kelas Dasar)
