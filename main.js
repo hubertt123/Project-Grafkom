@@ -143,8 +143,7 @@ export class Environment extends Animated {
   update(time, dt) {
     this.sample(time);
     const P = this.params;
-    // Lampu lorong kiri baru menyala saat T >= 105 (pas kamera tiba di depan lorong Bunzo)
-    const powerLeft = Math.max(0, Math.min(1, (time - 105) / 3));
+    const powerLeft = Math.max(0, Math.min(1, (time - 106) / 2.5));
 
     this.lamps.forEach((l, i) => {
       l.cable.setTransform({ axis: [1, 0, 0.3], angle: Math.sin(time * 0.9 + i) * 4 });
@@ -175,7 +174,7 @@ export class Environment extends Animated {
 // ==========================================
 // 2. STORY (Timeline & Keyframes Alur Cerita)
 // ==========================================
-export const DURATION = 170;
+export const DURATION = 190;
 
 export const captions = [
   [0, 5, "Lorong pabrik Playtime Co. ... sunyi dan gelap."],
@@ -188,8 +187,8 @@ export const captions = [
   [66, 72, "Huggy kembali tenang."],
   [72, 82, "Huggy melambai dan berbalik ke dalam lorong."],
   [82, 88, "Huggy menghilang kembali ke kegelapan lorong."],
-  [88, 142, "Memasuki Lorong Kiri: Area Musical Memory (Bunzo Bunny)"],
-  [142, 170, "Memasuki Lorong Kanan: Area Make-A-Friend (Cat-Bee)"]
+  [88, 158, "Memasuki Lorong Kiri: Area Musical Memory (Bunzo Bunny)"],
+  [158, 190, "Memasuki Lorong Kanan: Area Make-A-Friend (Cat-Bee)"]
 ];
 
 export function buildStory({ env, huggy, charB, charC, cam }) {
@@ -202,28 +201,26 @@ export function buildStory({ env, huggy, charB, charC, cam }) {
   camTo(cam, 80, 84, [0, 3.9, 2],     [0, 3.5, -20]);
 
   // =====================================================================
-  // CINEMATIC TOUR LORONG BUNZO (FULL GAMEPLAY & JUMPSCARE) & CAT-BEE
+  // CINEMATIC TOUR LORONG BUNZO & CAT-BEE
   // =====================================================================
-  // 1. Transisi Sinematik Meluncur Lambat ke Hub Central (Detik 84 - 96)
   camTo(cam, 84, 96, [0, 4.2, -14], [0, 3.5, -28]);
 
-  // 2. LORONG KIRI - BUNZO BUNNY (X: -10, Z: -48) -> WIDE CAMERA
-  camTo(cam, 96, 106,  [-10, 4.0, -32.0], [-10, 3.2, -48]); // Wide shot lorong kiri
-  camTo(cam, 106, 130, [-10, 3.8, -35.0], [-10, 3.2, -48]); // Wide framing gameplay & Bunzo merosot
-  camTo(cam, 130, 142, [-10, 3.6, -35.5], [-10, 3.0, -48]); // Wide framing NGAMUK / JUMPSCARE (Tahan 12 detik!)
+  // LORONG KIRI - BUNZO BUNNY (Kamera Wide Diam Konsisten)
+  camTo(cam, 96, 106,  [-10, 4.0, -32.0], [-10, 3.2, -48]);
+  camTo(cam, 106, 158, [-10, 3.8, -35.0], [-10, 3.2, -48]);
 
-  // 3. TRANSISI KE LORONG KANAN - CAT-BEE (X: 10, Z: -46.5) -> WIDE CAMERA
-  camTo(cam, 142, 148, [0, 4.5, -24],   [10, 3.5, -40]);  // Pindah perlahan lewat Hub Central
-  camTo(cam, 148, 170, [10, 3.8, -33.5], [10, 2.8, -46.5]);// Wide framing Cat-Bee melayang & Mesin Merah
+  // TRANSISI KE LORONG KANAN - CAT-BEE
+  camTo(cam, 158, 164, [0, 4.5, -24],   [10, 3.5, -40]);
+  camTo(cam, 164, 190, [10, 3.8, -33.5], [10, 2.8, -46.5]);
 
-  param(cam, "shake", 54, 55, 1);  param(cam, "shake", 63, 66, 0);
+  param(cam, "shake", 54, 55, 1);    param(cam, "shake", 63, 66, 0);
 
   param(env, "alarm", 53.5, 55, 1);  param(env, "alarm", 65, 68, 0);
   set(env, "power", 0, 1);  set(env, "power", 53.9, 1);
   flicker(env, "power", 54, 64, 0.3, 1, 0.15);
   param(env, "power", 65, 66, 1);  
-  param(env, "power", 94, 100, 0);
-  param(env, "power", 104, 106, 1); // Listrik menyala kembali tepat saat tiba di depan Bunzo
+  param(env, "power", 94, 105, 0);
+  param(env, "power", 105.5, 107, 1);
 
   set(charB, "pos", 0, [-2.2, 0, 16]);  set(charB, "rotY", 0, 180);
   moveTo(charB, 5, 17, [-2.2, 0, -6]);
@@ -281,7 +278,7 @@ const G_Bunzo = {
   shaft: upload(GL, meshOpenCylinder()),
 };
 
-// Inisialisasi Program Shader Cat-Bee (Lorong Kanan)
+// Inisialisasi Shader Cat-Bee
 const catbeeProg = GL.createProgram();
 GL.attachShader(catbeeProg, compile(GL, GL.VERTEX_SHADER, VS_CATBEE));
 GL.attachShader(catbeeProg, compile(GL, GL.FRAGMENT_SHADER, FS_CATBEE));
@@ -433,7 +430,7 @@ function tileGrid(frameM, cx, cy, cols, rows, tile, pitch, color) {
   rootBunzo = M4.mul(M4.translate(BRANCH_X.left, 0, -48), frameM);
   boxB([cx, cy, -0.02], [cols * pitch + 0.16, rows * pitch + 0.16, 0.2], [0.05, 0.05, 0.06], null, { spec: 0.1 });
   
-  const powerLeft = Math.max(0, Math.min(1, (T - 105) / 3));
+  const powerLeft = Math.max(0, Math.min(1, (T - 106) / 2.5));
   if (powerLeft <= 0) return;
 
   for (let r = 0; r < rows; r++)
@@ -445,7 +442,7 @@ function tileGrid(frameM, cx, cy, cols, rows, tile, pitch, color) {
 }
 
 function drawWord(frameM, word, cy, px) {
-  const powerLeft = Math.max(0, Math.min(1, (T - 105) / 3));
+  const powerLeft = Math.max(0, Math.min(1, (T - 106) / 2.5));
   if (powerLeft <= 0) return;
 
   rootBunzo = M4.mul(M4.translate(BRANCH_X.left, 0, -48), frameM);
@@ -516,7 +513,7 @@ function idleHands(except) {
 function updateGame(dt, t) {
   const g = game;
 
-  if (T < 105) {
+  if (T < 106) {
     g.phase = "wait";
     g.t = 0;
     g.age = 0;
@@ -585,8 +582,8 @@ function updateGame(dt, t) {
     case "gameover": {
       const on = Math.sin(t * 26) > 0;
       setScreen("", [0.95, 0.1, 0.08], on ? 1 : 0.15, 0);
-      g.shake = 1;
-      if (g.t > 15.0) { g.phase = "reset"; g.t = 0; blank(); }
+      g.shake = 1; // Mengatur guncangan gameover
+      if (g.t > 25.0) { g.phase = "reset"; g.t = 0; blank(); }
       break;
     }
     case "reset":
@@ -715,7 +712,6 @@ function frame(ms) {
   const dt = playing ? real : 0;
   T = Math.min(DURATION, T + dt);
 
-  // Transisi Otomatis ke Kamera Bebas setelah Tur Sinematik Selesai pada detik 170
   if (T >= DURATION && !free) {
     free = true;
     fc.pos = curEye.slice();
@@ -730,7 +726,13 @@ function frame(ms) {
 
   const c = cam.params;
   let eye = c.eye.slice(), target = c.target;
-  eye[0] += Math.sin(T * 47) * 0.06 * c.shake; eye[1] += Math.sin(T * 53) * 0.05 * c.shake; eye[2] += Math.sin(T * 41) * 0.05 * c.shake;
+  
+  // Guncangan kamera dinamis (menggabungkan shake cerita & shake gameover Bunzo)
+  const totalShake = c.shake + (T >= 96 && T <= 158 ? game.shake : 0);
+  eye[0] += Math.sin(T * 47) * 0.06 * totalShake; 
+  eye[1] += Math.sin(T * 53) * 0.05 * totalShake; 
+  eye[2] += Math.sin(T * 41) * 0.05 * totalShake;
+
   curEye = eye.slice(); curTarget = target.slice();
   if (free) {
     const f = fwdOf(), r = [Math.cos(fc.yaw), 0, Math.sin(fc.yaw)];
@@ -761,8 +763,7 @@ function frame(ms) {
   scene.render(LIBS.get_I4());
 
   // 2. Render Bunzo Bunny di Lorong Kiri (X: -10, Z: -48)
-  // Geometri tetap di-render dari detik 96 (gelap saat kamera bergerak), dan baru menyala di detik 105
-  if (T >= 96) {
+  if (T >= 96 && T <= 164) {
     GL.useProgram(bunzoProg);
     GL.uniformMatrix4fv(UBunzo.uView, false, new Float32Array(V));
     GL.uniformMatrix4fv(UBunzo.uProj, false, new Float32Array(Pm));
@@ -788,7 +789,7 @@ function frame(ms) {
   }
 
   // 3. Render Cat-Bee di Lorong Kanan (X: 10, Z: -46.5)
-  if (T >= 130) {
+  if (T >= 150) {
     GL.useProgram(catbeeProg);
     GL.uniformMatrix4fv(uProjCatbee, false, new Float32Array(Pm));
     GL.uniformMatrix4fv(uViewCatbee, false, new Float32Array(V));
