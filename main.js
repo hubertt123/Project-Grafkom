@@ -28,7 +28,7 @@ export class Environment extends Animated {
     super();
     this.ctx = ctx;
     this.root = new MyObject(ctx.GL, ctx.prog, ctx.locs);
-    this.params = { door: 0, alarm: 0, power: 1, flick: 0 };
+    this.params = { alarm: 0, power: 1, flick: 0 };
     this.lamps = [];
     this.build();
   }
@@ -120,7 +120,7 @@ export class Environment extends Animated {
     node(root, B.box(4.4, 0.4, 8, FLOOR), [x, -0.2, z - 4.2]);
     node(root, B.box(4.6, 8.4, 0.3, [0.01, 0.01, 0.02]), [x, 4.2, z - 8.4]);
     node(root, B.box(4.6, 0.15, 0.5, [0.05, 0.06, 0.08]), [x, 8.05, z - 0.1]);
-    this.door = node(root, B.box(4.2, 7.8, 0.2, [0.25, 0.10, 0.10]), [x, 3.9, z + 0.1]);
+    node(root, B.box(4.2, 7.8, 0.2, [0.25, 0.10, 0.10]), [x, 3.9, z + 0.1]);
     node(root, B.box(8, 0.02, 0.35, YELLOW), [x, 0.012, -44]);
     for (let k = -3; k <= 3; k++) node(root, B.box(0.5, 0.025, 0.35, [0.02, 0.02, 0.02]), [x + k * 1.1, 0.014, -44]);
   }
@@ -138,25 +138,24 @@ export class Environment extends Animated {
     node(root, B.box(1.4, 1.4, 1.4, BROWN), [-13.3, 0.7, -57], [0, 12, 0]);
     const ring = node(root, B.ellipsoid(2.6, 0.04, 2.6, [0.25, 0.70, 0.95]), [BRANCH_X.mid, 0.02, -46]); ring.emissive = 0.4;
     const ring2 = node(root, B.ellipsoid(3.1, 0.03, 3.1, [0.10, 0.25, 0.40]), [BRANCH_X.mid, 0.015, -46]);
-    const X = BRANCH_X.right;
-    node(root, B.box(5, 3.2, 0.8, [0.05, 0.06, 0.09]), [X, 1.6, -55.4]);
-    node(root, B.box(1.8, 1.1, 0.06, [0.30, 1.0, 0.55]), [X - 1.3, 2.3, -54.97]).emissive = 0.9;
-    node(root, B.box(1.8, 1.1, 0.06, [0.65, 0.35, 1.0]), [X + 1.3, 2.3, -54.97]).emissive = 0.9;
-    node(root, B.ellipsoid(2.6, 0.04, 2.6, [0.50, 0.85, 0.55]), [X, 0.02, -46.5]).emissive = 0.3;
-    node(root, B.ellipsoid(3.1, 0.03, 3.1, [0.20, 0.12, 0.30]), [X, 0.015, -46.5]);
   }
 
   update(time, dt) {
     this.sample(time);
     const P = this.params;
-    this.door.setTransform({ axis: [0, 1, 0.03], angle: -105 * P.door, pivot: [-2.1, 0, 0] });
+    // Lampu lorong kiri baru menyala saat T >= 105 (pas kamera tiba di depan lorong Bunzo)
+    const powerLeft = Math.max(0, Math.min(1, (time - 105) / 3));
+
     this.lamps.forEach((l, i) => {
       l.cable.setTransform({ axis: [1, 0, 0.3], angle: Math.sin(time * 0.9 + i) * 4 });
       const m = Math.min(1, P.alarm * l.alarmW);
       const c = B.mix(l.base, RED, m);
       const breathe = 0.93 + 0.07 * Math.sin(time * 0.6 + i * 1.3);
       const flick = 1 - 0.85 * P.flick * l.flickW;
-      const k = P.power * breathe * flick;
+      
+      const branchK = l.alarmW === 1 ? powerLeft : 1;
+      const k = P.power * breathe * flick * branchK;
+      
       l.bulb.tint = c.map(v => v * k);
       l.bulb.emissive = (0.85 + 0.15 * Math.sin(time * 23 + i * 5) * (i === 1 ? 1 : 0.3)) * k;
     });
@@ -176,19 +175,21 @@ export class Environment extends Animated {
 // ==========================================
 // 2. STORY (Timeline & Keyframes Alur Cerita)
 // ==========================================
-export const DURATION = 100;
+export const DURATION = 170;
 
 export const captions = [
   [0, 5, "Lorong pabrik Playtime Co. ... sunyi dan gelap."],
   [5, 17, "Dua pengunjung memasuki lorong."],
   [17, 25, "Mereka berhenti dan saling mengobrol."],
-  [25, 30, "Pintu di ujung lorong terbuka sendiri."],
+  [25, 30, "Suasana lorong menjadi aneh ..."],
   [30, 46, "Sesosok tinggi berjalan keluar dari kegelapan: Huggy Wuggy."],
   [46, 54, "Huggy tersenyum dan melambai ramah ..."],
   [54, 66, "... lalu tiba-tiba membesar! Mereka berlari!"],
   [66, 72, "Huggy kembali tenang."],
-  [80, 96, "Huggy melambai dan berbalik ke dalam pintu."],
-  [96, 100, ""]
+  [72, 82, "Huggy melambai dan berbalik ke dalam lorong."],
+  [82, 88, "Huggy menghilang kembali ke kegelapan lorong."],
+  [88, 142, "Memasuki Lorong Kiri: Area Musical Memory (Bunzo Bunny)"],
+  [142, 170, "Memasuki Lorong Kanan: Area Make-A-Friend (Cat-Bee)"]
 ];
 
 export function buildStory({ env, huggy, charB, charC, cam }) {
@@ -198,15 +199,31 @@ export function buildStory({ env, huggy, charB, charC, cam }) {
   camTo(cam, 30, 44, [0, 3.7, 7.5],   [0, 4, -10]);
   camTo(cam, 53, 55, [0, 2.0, 3.5],   [0, 5, -9]);
   camTo(cam, 64, 68, [0.8, 5.8, -3.5], [0, 5.6, -7.5]);
-  camTo(cam, 80, 90, [0, 3.9, 2],     [0, 3.5, -20]);
-  camTo(cam, 90, 100, [0, 3.9, 9],    [0, 3.5, -30]);
+  camTo(cam, 80, 84, [0, 3.9, 2],     [0, 3.5, -20]);
+
+  // =====================================================================
+  // CINEMATIC TOUR LORONG BUNZO (FULL GAMEPLAY & JUMPSCARE) & CAT-BEE
+  // =====================================================================
+  // 1. Transisi Sinematik Meluncur Lambat ke Hub Central (Detik 84 - 96)
+  camTo(cam, 84, 96, [0, 4.2, -14], [0, 3.5, -28]);
+
+  // 2. LORONG KIRI - BUNZO BUNNY (X: -10, Z: -48) -> WIDE CAMERA
+  camTo(cam, 96, 106,  [-10, 4.0, -32.0], [-10, 3.2, -48]); // Wide shot lorong kiri
+  camTo(cam, 106, 130, [-10, 3.8, -35.0], [-10, 3.2, -48]); // Wide framing gameplay & Bunzo merosot
+  camTo(cam, 130, 142, [-10, 3.6, -35.5], [-10, 3.0, -48]); // Wide framing NGAMUK / JUMPSCARE (Tahan 12 detik!)
+
+  // 3. TRANSISI KE LORONG KANAN - CAT-BEE (X: 10, Z: -46.5) -> WIDE CAMERA
+  camTo(cam, 142, 148, [0, 4.5, -24],   [10, 3.5, -40]);  // Pindah perlahan lewat Hub Central
+  camTo(cam, 148, 170, [10, 3.8, -33.5], [10, 2.8, -46.5]);// Wide framing Cat-Bee melayang & Mesin Merah
+
   param(cam, "shake", 54, 55, 1);  param(cam, "shake", 63, 66, 0);
 
-  param(env, "door", 25, 29, 1);
   param(env, "alarm", 53.5, 55, 1);  param(env, "alarm", 65, 68, 0);
   set(env, "power", 0, 1);  set(env, "power", 53.9, 1);
   flicker(env, "power", 54, 64, 0.3, 1, 0.15);
-  param(env, "power", 65, 66, 1);  param(env, "power", 94, 100, 0);
+  param(env, "power", 65, 66, 1);  
+  param(env, "power", 94, 100, 0);
+  param(env, "power", 104, 106, 1); // Listrik menyala kembali tepat saat tiba di depan Bunzo
 
   set(charB, "pos", 0, [-2.2, 0, 16]);  set(charB, "rotY", 0, 180);
   moveTo(charB, 5, 17, [-2.2, 0, -6]);
@@ -229,7 +246,7 @@ export function buildStory({ env, huggy, charB, charC, cam }) {
   scaleTo(huggy, 54, 57, 1.3);  scaleTo(huggy, 66, 70, 1);
   pulse(huggy, "scare", 54, 56, 63, 67);
   pulse(huggy, "wave", 72, 74, 79, 80.5);
-  turnTo(huggy, 80, 82, 180);  moveTo(huggy, 82, 99, [0, 0, -37]);
+  turnTo(huggy, 80, 82, 180);  moveTo(huggy, 82, 90, [0, 0, -37]);
 }
 
 // ==========================================
@@ -275,7 +292,6 @@ const uViewCatbee = GL.getUniformLocation(catbeeProg, "uView");
 const uProjCatbee = GL.getUniformLocation(catbeeProg, "uProj");
 const uCamCatbee = GL.getUniformLocation(catbeeProg, "uCam");
 
-// Inisialisasi Objek Cat-Bee & Make-A-Friend Environment (Lorong Kanan)
 const catBeeChar = new CatBee(GL);
 const catbeeEnv = new CatbeeEnvironment(GL);
 
@@ -416,15 +432,22 @@ const stillB = M4.identity();
 function tileGrid(frameM, cx, cy, cols, rows, tile, pitch, color) {
   rootBunzo = M4.mul(M4.translate(BRANCH_X.left, 0, -48), frameM);
   boxB([cx, cy, -0.02], [cols * pitch + 0.16, rows * pitch + 0.16, 0.2], [0.05, 0.05, 0.06], null, { spec: 0.1 });
+  
+  const powerLeft = Math.max(0, Math.min(1, (T - 105) / 3));
+  if (powerLeft <= 0) return;
+
   for (let r = 0; r < rows; r++)
     for (let c = 0; c < cols; c++) {
       const x = cx + (c - (cols - 1) / 2) * pitch, y = cy + ((rows - 1) / 2 - r) * pitch;
-      const tone = 0.9 + 0.1 * Math.sin(r * 12.9 + c * 7.7);
+      const tone = (0.9 + 0.1 * Math.sin(r * 12.9 + c * 7.7)) * powerLeft;
       boxB([x, y, 0.07], [tile, tile, 0.1], [color[0] * tone, color[1] * tone, color[2] * tone], null, { mode: 5 });
     }
 }
 
 function drawWord(frameM, word, cy, px) {
+  const powerLeft = Math.max(0, Math.min(1, (T - 105) / 3));
+  if (powerLeft <= 0) return;
+
   rootBunzo = M4.mul(M4.translate(BRANCH_X.left, 0, -48), frameM);
   const w = word.length * 4 - 1;
   word.split("").forEach((ch, li) => {
@@ -434,7 +457,7 @@ function drawWord(frameM, word, cy, px) {
       for (let c = 0; c < 3; c++)
         if (g[r][c] === "X") {
           const x = (li * 4 + c - (w - 1) / 2) * px, y = cy + (2 - r) * px;
-          boxB([x, y, 0.14], [px * 0.92, px * 0.92, 0.04], [0.22, 0.17, 0.04], null, { spec: 0.02 });
+          boxB([x, y, 0.14], [px * 0.92, px * 0.92, 0.04], [0.22 * powerLeft, 0.17 * powerLeft, 0.04 * powerLeft], null, { spec: 0.02 });
         }
   });
 }
@@ -442,7 +465,7 @@ function drawWord(frameM, word, cy, px) {
 const BTN_POS = BTN.map((b) => [4.3 * Math.sin(b.a), 3.05, -4.3 * Math.cos(b.a)]);
 const SEQ_ALL = [0, 2, 1, 3, 0, 1, 3, 2, 0, 3, 1, 2];
 const PLAN = ["ok", "ok", "err", "ok", "err", "err"];
-const Y_START = 5.4, Y_MAX = 5.8, SLOW_DESCENT = 0.03, DROP_SPEED = 1.1, DROP_TIME = 2.2, RISE = 1.4;
+const Y_START = 5.4, Y_MAX = 5.8, SLOW_DESCENT = 0.15, DROP_SPEED = 1.1, DROP_TIME = 2.2, RISE = 1.4;
 const FREQ = [262, 330, 392, 494];
 const HAND_IDLE = [[-1.5, 2.95, 1.9], [1.5, 2.95, 1.9]];
 const BLANK = { word: "", col: [1.0, 0.9, 0.05], dim: 0.25 };
@@ -492,6 +515,21 @@ function idleHands(except) {
 
 function updateGame(dt, t) {
   const g = game;
+
+  if (T < 105) {
+    g.phase = "wait";
+    g.t = 0;
+    g.age = 0;
+    g.y = Y_START;
+    g.vy = 0;
+    g.drop = 0;
+    g.rise = 0;
+    g.shake = 0;
+    g.lunge = 0;
+    blank();
+    return;
+  }
+
   g.t += dt; g.clapT += dt; g.age += dt;
   g.intro = Math.max(0.001, easeOutBack(Math.min(1, g.age / 1.6)));
   if (g.screen.pop) g.screen.pop = Math.max(0, g.screen.pop - dt * 4);
@@ -507,48 +545,48 @@ function updateGame(dt, t) {
 
   switch (g.phase) {
     case "wait":
-      if (g.t > 1.6) startAttempt();
+      if (g.t > 2.0) startAttempt();
       break;
     case "show": {
-      const n = seqLen(), S = 0.95, idx = Math.floor(g.t / S);
+      const n = seqLen(), S = 1.1, idx = Math.floor(g.t / S);
       if (idx !== g.step && idx < n) {
         g.step = idx;
         const i = g.seq[idx];
-        light(i, 0.65);
-        setScreen(BTN[i].word, BTN[i].col, 1, 0.65);
+        light(i, 0.7);
+        setScreen(BTN[i].word, BTN[i].col, 1, 0.7);
         g.clapT = 0;
         beep(FREQ[i], 0.4);
       }
-      if (g.t >= n * S + 0.5) { g.phase = "input"; g.t = 0; g.step = -1; blank(); }
+      if (g.t >= n * S + 0.6) { g.phase = "input"; g.t = 0; g.step = -1; blank(); }
       break;
     }
     case "input": {
-      const n = seqLen(), P = 1.25, idx = Math.floor(g.t / P), lt = g.t - idx * P;
+      const n = seqLen(), P = 1.4, idx = Math.floor(g.t / P), lt = g.t - idx * P;
       if (idx >= n) { finishInput(true); break; }
       const want = g.seq[idx];
       const chosen = idx === g.failAt ? (want + 1) % 4 : want;
       active = chosen < 2 ? 0 : 1;
-      if (lt < 0.55) aimHand(active, chosen, 1.4);
-      else if (lt < 0.85) aimHand(active, chosen, 0.88);
+      if (lt < 0.6) aimHand(active, chosen, 1.4);
+      else if (lt < 0.95) aimHand(active, chosen, 0.88);
       else { game.hands[active].tp = HAND_IDLE[active].slice(); game.hands[active].tr = 0; }
-      if (idx !== g.step && lt >= 0.55) {
+      if (idx !== g.step && lt >= 0.6) {
         g.step = idx;
         light(chosen, 0.5); g.btn[chosen].press = 1;
         setScreen(BTN[chosen].word, BTN[chosen].col, 1, 0.5);
         beep(FREQ[chosen], 0.3);
         if (chosen !== want) g.wrong = true;
       }
-      if (g.wrong && lt >= 0.85) finishInput(false);
+      if (g.wrong && lt >= 0.95) finishInput(false);
       break;
     }
     case "result":
-      if (g.t > (g.drop > 0 ? 2.8 : 2.4)) { g.phase = "wait"; g.t = 0.6; }
+      if (g.t > (g.drop > 0 ? 3.2 : 2.6)) { g.phase = "wait"; g.t = 0.6; }
       break;
     case "gameover": {
       const on = Math.sin(t * 26) > 0;
       setScreen("", [0.95, 0.1, 0.08], on ? 1 : 0.15, 0);
       g.shake = 1;
-      if (g.t > 3.6) { g.phase = "reset"; g.t = 0; blank(); }
+      if (g.t > 15.0) { g.phase = "reset"; g.t = 0; blank(); }
       break;
     }
     case "reset":
@@ -677,6 +715,15 @@ function frame(ms) {
   const dt = playing ? real : 0;
   T = Math.min(DURATION, T + dt);
 
+  // Transisi Otomatis ke Kamera Bebas setelah Tur Sinematik Selesai pada detik 170
+  if (T >= DURATION && !free) {
+    free = true;
+    fc.pos = curEye.slice();
+    const d = [curTarget[0] - curEye[0], curTarget[1] - curEye[1], curTarget[2] - curEye[2]], l = Math.hypot(...d);
+    fc.yaw = Math.atan2(d[0], -d[2]);
+    fc.pitch = Math.asin(d[1] / l);
+  }
+
   env.update(T, dt);
   actors.forEach(a => a.update(T, dt));
   cam.sample(T);
@@ -714,58 +761,56 @@ function frame(ms) {
   scene.render(LIBS.get_I4());
 
   // 2. Render Bunzo Bunny di Lorong Kiri (X: -10, Z: -48)
-  GL.useProgram(bunzoProg);
-  GL.uniformMatrix4fv(UBunzo.uView, false, new Float32Array(V));
-  GL.uniformMatrix4fv(UBunzo.uProj, false, new Float32Array(Pm));
-  GL.uniform3fv(UBunzo.uEye, eye);
+  // Geometri tetap di-render dari detik 96 (gelap saat kamera bergerak), dan baru menyala di detik 105
+  if (T >= 96) {
+    GL.useProgram(bunzoProg);
+    GL.uniformMatrix4fv(UBunzo.uView, false, new Float32Array(V));
+    GL.uniformMatrix4fv(UBunzo.uProj, false, new Float32Array(Pm));
+    GL.uniform3fv(UBunzo.uEye, eye);
 
-  updateGame(real, ms / 1000);
-  drawBunzoMap();
-  drawBunzoHands();
+    updateGame(real, ms / 1000);
+    drawBunzoMap();
+    drawBunzoHands();
 
-  bunzoChar.drawBunzo(ms / 1000, {
-    x: BRANCH_X.left,
-    y: game.y,
-    z: -48 + 0.7,
-    s: 0.5,
-    base: false,
-    cable: true,
-    k: game.k,
-    sway: game.sway,
-    shake: game.shake,
-    lunge: game.lunge,
-    intro: game.intro,
-  }, { clap: false, auto: true }, game);
+    bunzoChar.drawBunzo(ms / 1000, {
+      x: BRANCH_X.left,
+      y: game.y,
+      z: -48 + 0.7,
+      s: 0.5,
+      base: false,
+      cable: true,
+      k: game.k,
+      sway: game.sway,
+      shake: game.shake,
+      lunge: game.lunge,
+      intro: game.intro,
+    }, { clap: false, auto: true }, game);
+  }
 
-  // 3. Render Cat-Bee & Make-A-Friend Environment di Lorong Kanan (X: 10, Z: -46.5) menggunakan catbeeProg
-  GL.useProgram(catbeeProg);
-  GL.uniformMatrix4fv(uProjCatbee, false, new Float32Array(Pm));
-  GL.uniformMatrix4fv(uViewCatbee, false, new Float32Array(V));
-  GL.uniform3fv(uCamCatbee, eye);
+  // 3. Render Cat-Bee di Lorong Kanan (X: 10, Z: -46.5)
+  if (T >= 130) {
+    GL.useProgram(catbeeProg);
+    GL.uniformMatrix4fv(uProjCatbee, false, new Float32Array(Pm));
+    GL.uniformMatrix4fv(uViewCatbee, false, new Float32Array(V));
+    GL.uniform3fv(uCamCatbee, eye);
 
-  catbeeEnv.update(ms / 1000);
-  const mRightBranch = LIBS.translate(BRANCH_X.right, 0, -46.5);
-  catbeeEnv.draw(GL, catbeeProg, mRightBranch);
+    catbeeEnv.update(ms / 1000);
+    const mRightBranch = LIBS.translate(BRANCH_X.right, 0, -46.5);
+    catbeeEnv.draw(GL, catbeeProg, mRightBranch);
 
-  // Paksa mode melayang/hover (force = 1.0) agar gerakan sayap & animasi terbang mulus
-  catBeeChar.update(ms / 1000, dt, playing, 1.0);
-  catAngle += dt * 0.7 * catBeeChar.speed;
-  const Radius = 1.4;
+    catBeeChar.update(ms / 1000, dt, playing, 1.0);
+    catAngle += dt * 0.7 * catBeeChar.speed;
+    const Radius = 1.4;
 
-  let mCat = LIBS.multiply(mRightBranch, LIBS.translate(Radius * Math.sin(catAngle), 0, Radius * Math.cos(catAngle)));
+    let mCat = LIBS.multiply(mRightBranch, LIBS.translate(Radius * Math.sin(catAngle), 0, Radius * Math.cos(catAngle)));
+    const angleDeg = (catAngle * 180 / Math.PI) + 90;
+    mCat = LIBS.multiply(mCat, LIBS.rotateY(angleDeg));
+    mCat = LIBS.multiply(mCat, LIBS.scale(1.35, 1.35, 1.35));
 
-  // Konversi sudut radian ke derajat untuk LIBS.rotateY agar arah Cat-Bee selalu tepat ke depan
-  const angleDeg = (catAngle * 180 / Math.PI) + 90;
-  mCat = LIBS.multiply(mCat, LIBS.rotateY(angleDeg));
+    catBeeChar.draw(GL, catbeeProg, mCat);
+  }
 
-  // Perbesar ukuran Cat-Bee sebesar 1.35x
-  mCat = LIBS.multiply(mCat, LIBS.scale(1.35, 1.35, 1.35));
-
-  catBeeChar.draw(GL, catbeeProg, mCat);
-
-  statusEl.textContent = free ? "KAMERA BEBAS aktif - WASD gerak, drag = lihat, F = kembali" : "";
   const cap = captions.find(x => T >= x[0] && T < x[1]) || captions[captions.length - 1];
-  capEl.textContent = cap[2];
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
