@@ -176,21 +176,6 @@ export class Environment extends Animated {
 // ==========================================
 export const DURATION = 190;
 
-export const captions = [
-  [0, 5, "Lorong pabrik Playtime Co. ... sunyi dan gelap."],
-  [5, 17, "Dua pengunjung memasuki lorong."],
-  [17, 25, "Mereka berhenti dan saling mengobrol."],
-  [25, 30, "Suasana lorong menjadi aneh ..."],
-  [30, 46, "Sesosok tinggi berjalan keluar dari kegelapan: Huggy Wuggy."],
-  [46, 54, "Huggy tersenyum dan melambai ramah ..."],
-  [54, 66, "... lalu tiba-tiba membesar! Mereka berlari!"],
-  [66, 72, "Huggy kembali tenang."],
-  [72, 82, "Huggy melambai dan berbalik ke dalam lorong."],
-  [82, 88, "Huggy menghilang kembali ke kegelapan lorong."],
-  [88, 158, "Memasuki Lorong Kiri: Area Musical Memory (Bunzo Bunny)"],
-  [158, 190, "Memasuki Lorong Kanan: Area Make-A-Friend (Cat-Bee)"]
-];
-
 export function buildStory({ env, huggy, charB, charC, cam }) {
   set(cam, "eye", 0, [0, 7, 15]);  set(cam, "target", 0, [0, 2.5, -10]);  set(cam, "shake", 0, 0);
   camTo(cam, 0, 6,   [0, 3.9, 9.5],   [0, 3, -8]);
@@ -200,12 +185,10 @@ export function buildStory({ env, huggy, charB, charC, cam }) {
   camTo(cam, 64, 68, [0.8, 5.8, -3.5], [0, 5.6, -7.5]);
   camTo(cam, 80, 84, [0, 3.9, 2],     [0, 3.5, -20]);
 
-  // =====================================================================
   // CINEMATIC TOUR LORONG BUNZO & CAT-BEE
-  // =====================================================================
   camTo(cam, 84, 96, [0, 4.2, -14], [0, 3.5, -28]);
 
-  // LORONG KIRI - BUNZO BUNNY (Kamera Wide Diam Konsisten)
+  // LORONG KIRI - BUNZO BUNNY
   camTo(cam, 96, 106,  [-10, 4.0, -32.0], [-10, 3.2, -48]);
   camTo(cam, 106, 158, [-10, 3.8, -35.0], [-10, 3.2, -48]);
 
@@ -252,7 +235,7 @@ export function buildStory({ env, huggy, charB, charC, cam }) {
 const canvas = document.getElementById("glcanvas");
 const { GL, prog, locs, uP, uV, uCam, uLP, uLC } = createRenderer(canvas);
 
-// Inisialisasi Program Shader Bunzo Bunny (Lorong Kiri)
+// Shader Bunzo Bunny
 const bunzoProg = GL.createProgram();
 GL.attachShader(bunzoProg, compile(GL, GL.VERTEX_SHADER, VS));
 GL.attachShader(bunzoProg, compile(GL, GL.FRAGMENT_SHADER, FS));
@@ -278,7 +261,7 @@ const G_Bunzo = {
   shaft: upload(GL, meshOpenCylinder()),
 };
 
-// Inisialisasi Shader Cat-Bee
+// Shader Cat-Bee
 const catbeeProg = GL.createProgram();
 GL.attachShader(catbeeProg, compile(GL, GL.VERTEX_SHADER, VS_CATBEE));
 GL.attachShader(catbeeProg, compile(GL, GL.FRAGMENT_SHADER, FS_CATBEE));
@@ -305,14 +288,12 @@ const cam = new Animated();
 buildStory({ env, huggy, charB, charC, cam });
 scene.setup();
 
-const capEl = document.getElementById("caption");
 let T = parseFloat(new URLSearchParams(location.search).get("t")) || 0;
 let playing = true, last = null, free = false, drag = false, lx = 0, ly = 0;
 const keys = new Set();
 const fc = { pos: [0, 3.7, 7.5], yaw: 0, pitch: 0 };
 const fwdOf = () => [Math.sin(fc.yaw) * Math.cos(fc.pitch), Math.sin(fc.pitch), -Math.cos(fc.yaw) * Math.cos(fc.pitch)];
 let curEye = [0, 4, 8], curTarget = [0, 3, -8];
-const statusEl = document.getElementById("camstatus");
 
 window.addEventListener("keydown", e => {
   keys.add(e.code);
@@ -582,7 +563,7 @@ function updateGame(dt, t) {
     case "gameover": {
       const on = Math.sin(t * 26) > 0;
       setScreen("", [0.95, 0.1, 0.08], on ? 1 : 0.15, 0);
-      g.shake = 1; // Mengatur guncangan gameover
+      g.shake = 1;
       if (g.t > 25.0) { g.phase = "reset"; g.t = 0; blank(); }
       break;
     }
@@ -727,7 +708,6 @@ function frame(ms) {
   const c = cam.params;
   let eye = c.eye.slice(), target = c.target;
   
-  // Guncangan kamera dinamis (menggabungkan shake cerita & shake gameover Bunzo)
   const totalShake = c.shake + (T >= 96 && T <= 158 ? game.shake : 0);
   eye[0] += Math.sin(T * 47) * 0.06 * totalShake; 
   eye[1] += Math.sin(T * 53) * 0.05 * totalShake; 
@@ -762,8 +742,13 @@ function frame(ms) {
   GL.uniform3fv(uLC, new Float32Array(L.col));
   scene.render(LIBS.get_I4());
 
-  // 2. Render Bunzo Bunny di Lorong Kiri (X: -10, Z: -48)
-  if (T >= 96 && T <= 164) {
+  // HITUNG JARAK KAMERA KE SETIAP LORONG (CULLING DISTANCE)
+  const distToBunzo = Math.hypot(eye[0] - BRANCH_X.left, eye[2] - (-48));
+  const distToCatBee = Math.hypot(eye[0] - BRANCH_X.right, eye[2] - (-46.5));
+
+  // 2. Render Bunzo Bunny di Lorong Kiri
+  // Di-render saat timeline sinematik ATAU jika kamera mendekat dalam jarak <= 30 unit
+  if ((T >= 96 && T <= 164) || distToBunzo <= 30) {
     GL.useProgram(bunzoProg);
     GL.uniformMatrix4fv(UBunzo.uView, false, new Float32Array(V));
     GL.uniformMatrix4fv(UBunzo.uProj, false, new Float32Array(Pm));
@@ -788,8 +773,9 @@ function frame(ms) {
     }, { clap: false, auto: true }, game);
   }
 
-  // 3. Render Cat-Bee di Lorong Kanan (X: 10, Z: -46.5)
-  if (T >= 150) {
+  // 3. Render Cat-Bee di Lorong Kanan
+  // Di-render saat timeline sinematik ATAU jika kamera mendekat dalam jarak <= 30 unit
+  if (T >= 150 || distToCatBee <= 30) {
     GL.useProgram(catbeeProg);
     GL.uniformMatrix4fv(uProjCatbee, false, new Float32Array(Pm));
     GL.uniformMatrix4fv(uViewCatbee, false, new Float32Array(V));
@@ -811,7 +797,6 @@ function frame(ms) {
     catBeeChar.draw(GL, catbeeProg, mCat);
   }
 
-  const cap = captions.find(x => T >= x[0] && T < x[1]) || captions[captions.length - 1];
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
